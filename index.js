@@ -90,6 +90,26 @@ wss.on('connection', ws => {
               }
               
               robot.mouseToggle('up');
+              ws.send('draw_circle');
+        }
+
+        if (command === 'prnt_scrn') {
+            let currentMousePosition = robot.getMousePos();
+            let buff = robot.screen.capture(currentMousePosition.x, currentMousePosition.y, 200, 200);
+            
+            new Jimp({ data: buff.image, width: 200, height: 200 }, async (err, image) => {
+                if (err) {
+                    console.log('something went wrong')
+                }
+
+                let imgBuffer = await image.getBufferAsync(Jimp.MIME_PNG)
+                ws.send(`prnt_scrn ${imgBuffer.toString('base64')}`);
+              });
+        }
+
+        if (command === 'mouse_position') {
+            let currentMousePosition = robot.getMousePos();
+            ws.send(`mouse_position ${currentMousePosition.x} px,${currentMousePosition.y} px`);
         }
 
     })
@@ -97,6 +117,8 @@ wss.on('connection', ws => {
     
 })
 
-wss.on('close', ()=> {
-    console.log('Connection closed!')
-})
+process.on('SIGINT', () => {
+    process.stdout.write('Closing websocket...\n');
+    wss.close();
+    process.exit(0);
+  });
